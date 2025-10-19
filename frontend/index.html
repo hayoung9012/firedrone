@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>드론 모니터링 대시보드</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- 사이드바 -->
+    <div class="sidebar">
+        <h1>🚁 드론 모니터</h1>
+        <ul>
+            <li><a href="#" data-page="dashboard" class="nav-link active">📊 대시보드</a></li>
+            <li><a href="#" data-page="history" class="nav-link">📋 로그</a></li>
+        </ul>
+        <div style="margin-top: 40px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+            <div style="margin-bottom: 10px;">
+                <span class="status-indicator status-online"></span>
+                <span>서버 연결</span>
+            </div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.7);">
+                마지막 업데이트:<br>
+                <span id="lastUpdate">-</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="main-content">
+        <!-- 대시보드 페이지 -->
+        <div id="dashboard" class="page active">
+            <h1>실시간 모니터링</h1>
+
+            <!-- 센서 + 카메라 레이아웃 -->
+            <div class="dashboard-layout">
+                <!-- 왼쪽: 센서 카드 -->
+                <div class="sensor-grid">
+                    <div class="sensor-card">
+                        <div class="sensor-icon" style="background: #ffebee;">💨</div>
+                        <div class="sensor-info">
+                            <p>MQ-2 가스 센서</p>
+                            <div>
+                                <span class="sensor-value" id="gasValue">-</span>
+                                <span class="sensor-unit">ppm</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-icon" style="background: #fce4ec;">🌡️</div>
+                        <div class="sensor-info">
+                            <p>IR 온도 센서</p>
+                            <div>
+                                <span class="sensor-value" id="temp">-</span>
+                                <span class="sensor-unit">°C</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-icon" style="background: #e3f2fd;">📏</div>
+                        <div class="sensor-info">
+                            <p>LiDAR 고도 센서</p>
+                            <div>
+                                <span class="sensor-value" id="altitude">-</span>
+                                <span class="sensor-unit">m</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 오른쪽: 카메라 -->
+                <div class="camera-container">
+                    <div class="camera-controls">
+                        <select id="resolutionSelect">
+                            <option value="720">720p</option>
+                            <option value="1080">1080p</option>
+                        </select>
+                        <button id="startCameraBtn" class="btn btn-primary">📹 시작</button>
+                        <button id="stopCameraBtn" class="btn btn-danger" style="display: none;">⏹️ 중지</button>
+                    </div>
+                    <div class="video-wrapper">
+                        <video id="videoElement" autoplay playsinline></video>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 차트 -->
+            <div class="card" style="max-height: 400px;">
+                <h2 style="font-size: 20px; margin-bottom: 15px;">센서 데이터 추이</h2>
+                <canvas id="sensorChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+
+        <!-- 히스토리(로그) 페이지 -->
+        <div id="history" class="page">
+            <h1>로그 데이터</h1>
+            
+            <!-- 센서값 로그 -->
+            <div class="card" style="margin-bottom: 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; margin: 0;">📊 센서값 로그</h2>
+                    <button id="fetchSensorLogBtn" class="btn btn-info">최근 50건 조회</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>시간</th>
+                                <th>가스 (ppm)</th>
+                                <th>온도 (°C)</th>
+                                <th>고도 (m)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sensorLogTableBody">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #999;">버튼을 눌러 데이터를 조회하세요</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 화재 경보 로그 -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; margin: 0;">🔥 화재 경보 로그</h2>
+                    <button id="fetchFireLogBtn" class="btn btn-danger">전체 조회</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>발생 시간</th>
+                                <th>감지 조건</th>
+                                <th>가스값 (ppm)</th>
+                                <th>IR 온도 (°C)</th>
+                                <th>YOLO 감지</th>
+                                <th>조치</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fireLogTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: #999;">화재 경보 기록이 없습니다</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 화재 알림 모달 -->
+    <div id="fireAlertModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-icon">🔥</div>
+            <h2 class="modal-title" style="color: #e74c3c;">화재 감지!</h2>
+            <p class="modal-message" id="fireAlertMessage"></p>
+            <button class="btn btn-danger" onclick="closeFireAlert()">확인</button>
+        </div>
+    </div>
+
+    <!-- 수동 투하 모달 -->
+    <div id="manualDropModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-icon">⚠️</div>
+            <h2 class="modal-title">수동 투하 확인</h2>
+            <p class="modal-message" id="manualDropMessage"></p>
+            <div class="modal-buttons">
+                <button class="btn btn-danger" onclick="confirmDrop()">투하하기</button>
+                <button class="btn" style="background: #95a5a6; color: white;" onclick="closeManualDrop()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 파일 -->
+    <script src="js/websocket.js"></script>
+    <script src="js/chart.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
+
